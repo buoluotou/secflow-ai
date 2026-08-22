@@ -1,5 +1,5 @@
 """Model registry — import all models so metadata is complete."""
-from app.models.analysis import AIAnalysis, AuditLog, Report, RiskAssessment, ScanJob
+from app.models.analysis import AIAnalysis, AuditLog, Report, RiskAssessment, ScanJob, SystemSetting
 from app.models.incident import AttackTechnique, Incident
 from app.models.organization import Organization, User
 from app.models.project import Asset, Project
@@ -20,5 +20,6 @@ __all__ = [
     "RiskAssessment",
     "ScanJob",
     "SecurityEvent",
+    "SystemSetting",
     "User",
 ]

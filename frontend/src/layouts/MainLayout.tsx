@@ -2,16 +2,10 @@ import { useEffect } from 'react'
 import { Layout, Menu, Dropdown, Avatar, Typography, Space } from 'antd'
 import {
   DashboardOutlined,
-  ProjectOutlined,
-  HddOutlined,
-  ThunderboltOutlined,
-  BugOutlined,
-  SafetyCertificateOutlined,
   AlertOutlined,
+  BugOutlined,
   ScanOutlined,
-  RobotOutlined,
   FileTextOutlined,
-  AuditOutlined,
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
@@ -22,19 +16,14 @@ import { authApi } from '../services/api'
 
 const { Sider, Header, Content } = Layout
 
+// 精简菜单：只保留核心工作流
 const MENU = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard 总览' },
-  { key: '/projects', icon: <ProjectOutlined />, label: 'Projects 项目' },
-  { key: '/assets', icon: <HddOutlined />, label: 'Assets 资产' },
-  { key: '/events', icon: <ThunderboltOutlined />, label: 'Events 安全事件' },
-  { key: '/findings', icon: <BugOutlined />, label: 'Findings 漏洞' },
-  { key: '/iocs', icon: <SafetyCertificateOutlined />, label: 'IOCs 威胁情报' },
-  { key: '/incidents', icon: <AlertOutlined />, label: 'Incidents 事件' },
-  { key: '/scans', icon: <ScanOutlined />, label: 'Scans 扫描任务' },
-  { key: '/analysis', icon: <RobotOutlined />, label: 'AI Analysis' },
-  { key: '/reports', icon: <FileTextOutlined />, label: 'Reports 报告' },
-  { key: '/audit', icon: <AuditOutlined />, label: 'Audit 审计' },
-  { key: '/settings', icon: <SettingOutlined />, label: 'Settings 设置' },
+  { key: '/dashboard', icon: <DashboardOutlined />, label: '总览' },
+  { key: '/incidents', icon: <AlertOutlined />, label: '安全事件' },
+  { key: '/findings', icon: <BugOutlined />, label: '漏洞' },
+  { key: '/scans', icon: <ScanOutlined />, label: '扫描' },
+  { key: '/reports', icon: <FileTextOutlined />, label: '报告' },
+  { key: '/settings', icon: <SettingOutlined />, label: '设置' },
 ]
 
 export default function MainLayout() {
@@ -55,9 +44,9 @@ export default function MainLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider theme="dark" width={220}>
-        <div style={{ padding: '16px', color: '#fff', fontWeight: 700, fontSize: 16 }}>
-          🛡️ SecFlow AI
+      <Sider theme="dark" width={170}>
+        <div style={{ padding: '14px 16px', color: '#fff', fontWeight: 700, fontSize: 15 }}>
+          🛡️ SecFlow
         </div>
         <Menu
           theme="dark"
@@ -68,7 +57,7 @@ export default function MainLayout() {
         />
       </Sider>
       <Layout>
-        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+        <Header style={{ background: '#fff', padding: '0 20px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
           <Dropdown
             menu={{
               items: [
@@ -79,13 +68,10 @@ export default function MainLayout() {
             <Space style={{ cursor: 'pointer' }}>
               <Avatar size="small" icon={<UserOutlined />} />
               <Typography.Text>{user?.full_name || user?.username || '未登录'}</Typography.Text>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {user?.role}
-              </Typography.Text>
             </Space>
           </Dropdown>
         </Header>
-        <Content style={{ margin: 16 }}>
+        <Content style={{ margin: 14 }}>
           <Outlet />
         </Content>
       </Layout>

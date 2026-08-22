@@ -1,8 +1,11 @@
-"""LLM configuration — read from environment (same keys as .env.example)."""
+"""LLM configuration — read from environment (same keys as .env.example)
+or from runtime settings (Settings page)."""
 from __future__ import annotations
 
 import os
 
+# Well-known transports. ANY other provider name is treated as an
+# OpenAI-compatible endpoint (DeepSeek, Qwen, custom gateways, ...).
 PROVIDERS = ("mock", "openai", "ollama")
 
 
@@ -17,7 +20,7 @@ class LLMConfig:
         temperature: float = 0.2,
         max_tokens: int = 4096,
     ):
-        self.provider = provider if provider in PROVIDERS else "mock"
+        self.provider = provider if provider in PROVIDERS else "openai-compatible"
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model or self._default_model()

@@ -48,9 +48,9 @@ class LLMClient:
             return self._mock_complete(system, user, json_mode)
         if self.config.provider == "ollama":
             return self._ollama_complete(system, user, json_mode, temperature, max_tokens)
-        if self.config.provider == "openai":
-            return self._openai_complete(system, user, json_mode, temperature, max_tokens)
-        raise LLMError(f"Unknown LLM provider: {self.config.provider}")
+        # openai, deepseek, qwen, custom and any other provider name all
+        # speak the OpenAI-compatible Chat Completions protocol
+        return self._openai_complete(system, user, json_mode, temperature, max_tokens)
 
     def complete_json(self, system: str, user: str, **kw: Any) -> dict:
         """Completion parsed as JSON; raises LLMError on parse failure."""

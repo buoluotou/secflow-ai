@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.services.llm_config import get_llm_config
 from ai.models.llm import LLMClient
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -83,30 +84,30 @@ def health_misp() -> dict:
 
 
 @router.get("/llm")
-def health_llm() -> dict:
-    info = LLMClient().health()
+def health_llm(db: Session = Depends(get_db)) -> dict:
+    client = LLMClient(get_llm_config(db))
+    info = client.health()
     return _tri("ok" if info.get("ok") else "error", info.get("ok", False),
                 info.get("error") if not info.get("ok") else None)
 
 
 @router.get("/config")
-def health_config(_: Session = Depends(get_db)) -> dict:
+def health_config(db: Session = Depends(get_db)) -> dict:
     """Non-sensitive configuration summary (for the frontend setup wizard)."""
+    from app.services.llm_config import get_runtime_llm_config
+
+    llm = get_llm_config(db)
+    runtime = get_runtime_llm_config(db)
     return {
         "llm": {
-            "provider": settings.llm_provider,
-            "model": settings.llm_model or _default_model_hint(),
-            "base_url": settings.llm_base_url or "",
-            "configured": bool(settings.llm_base_url) if settings.llm_provider != "mock" else True,
+            "provider": llm.provider,
+            "model": llm.model,
+            "base_url": llm.base_url,
+            "configured": runtime is not None or llm.provider != "mock",
+            "source": "runtime" if runtime else "env",
         },
         "wazuh": {"configured": bool(settings.wazuh_url)},
         "misp": {"configured": bool(settings.misp_url and settings.misp_api_key)},
         "nuclei": {"mode": settings.nuclei_mode},
         "env": settings.app_env,
     }
-
-
-def _default_model_hint() -> str:
-    if settings.llm_provider == "ollama":
-        return "qwen2.5:7b"
-    return "gpt-4o-mini"

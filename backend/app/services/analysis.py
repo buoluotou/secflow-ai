@@ -22,6 +22,7 @@ from app.models.analysis import AIAnalysis, RiskAssessment
 from app.models.incident import AttackTechnique, Incident
 from app.services.audit import log_audit
 from app.services.context import ContextEngine
+from app.services.llm_config import get_llm_config
 from risk.engine import RiskEngine
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,8 @@ logger = logging.getLogger(__name__)
 class AnalysisService:
     def __init__(self, db: Session):
         self.db = db
-        self.llm = LLMClient()
+        # Runtime LLM config (Settings page) takes precedence over .env
+        self.llm = LLMClient(get_llm_config(db))
 
     # ------------------------------------------------------------------
     def analyze_incident(self, incident: Incident, agents: list[str] | None = None,

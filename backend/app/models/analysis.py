@@ -1,4 +1,5 @@
-"""Operational models: AIAnalysis, RiskAssessment, Report, ScanJob, AuditLog."""
+"""Operational models: AIAnalysis, RiskAssessment, Report, ScanJob, AuditLog,
+SystemSetting (runtime configuration KV)."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,6 +9,15 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
 from app.models.base import PkMixin, TimestampMixin
+
+
+class SystemSetting(Base, PkMixin, TimestampMixin):
+    """Runtime key-value configuration (e.g. LLM provider settings set from
+    the web UI — takes effect immediately without restarting services)."""
+    __tablename__ = "system_settings"
+
+    key: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 class AIAnalysis(Base, PkMixin, TimestampMixin):
