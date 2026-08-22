@@ -53,7 +53,7 @@
 **Linux**
 
 ```bash
-git clone <repo-url> secflow-ai && cd secflow-ai
+git clone https://github.com/buoluotou/secflow-ai.git secflow-ai && cd secflow-ai
 ./scripts/linux/install.sh     # Docker + vm.max_map_count + 网络 + .env
 ./scripts/linux/start.sh       # docker compose up -d
 ```
@@ -61,7 +61,7 @@ git clone <repo-url> secflow-ai && cd secflow-ai
 **Windows (PowerShell)**
 
 ```powershell
-git clone <repo-url> secflow-ai; cd secflow-ai
+git clone https://github.com/buoluotou/secflow-ai.git secflow-ai; cd secflow-ai
 .\scripts\windows\install.ps1
 .\scripts\windows\start.ps1
 ```
