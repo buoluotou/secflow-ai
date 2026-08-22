@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Layout, Menu, Dropdown, Avatar, Typography, Space } from 'antd'
 import {
+  RobotOutlined,
   DashboardOutlined,
   AlertOutlined,
   BugOutlined,
@@ -18,6 +19,7 @@ const { Sider, Header, Content } = Layout
 
 // 安服大模块导航：总览 / 事件响应 / 漏洞管理 / 安全报告 / 日志审查 / 系统维护
 const MENU = [
+  { key: '/copilot', icon: <RobotOutlined />, label: 'AI 助手' },
   { key: '/dashboard', icon: <DashboardOutlined />, label: '总览' },
   { key: '/incidents', icon: <AlertOutlined />, label: '事件响应' },
   { key: '/findings', icon: <BugOutlined />, label: '漏洞管理' },
