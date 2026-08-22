@@ -1,5 +1,29 @@
 # 部署指南
 
+## 快速部署（推荐）
+
+```bash
+./scripts/setup.sh          # 交互式向导：镜像源探测 + AI 接入引导 + 启动
+./scripts/setup.sh --auto   # 全默认无交互
+```
+
+## 容器镜像源问题（常见部署失败原因）
+
+Docker Hub（registry-1.docker.io）在某些网络环境不可达，导致 `docker compose
+up -d --build` 在拉取 `postgres / redis / python / node / nginx` 基础镜像时失败。
+
+三种解决方式：
+
+1. **`./scripts/setup.sh`**：自动探测 `docker.1ms.run / dockerproxy.net /
+   docker.m.daocloud.io` 等镜像站，选可用者写入 `.env` 的 `PY_IMAGE /
+   NODE_IMAGE / NGINX_IMAGE`（compose 构建时生效）
+2. 手动配置：在 `/etc/docker/daemon.json` 添加 `registry-mirrors`
+3. 手动拉取后打标签：`docker pull <mirror>/library/postgres:16-alpine &&
+   docker tag <mirror>/library/postgres:16-alpine postgres:16-alpine`
+
+> pip / npm 同样支持镜像：`.env` 中 `PIP_INDEX_URL`（如清华源）、
+> `NPM_REGISTRY`（如 npmmirror）会被 Dockerfile 构建时使用。
+
 ## 硬件基线（规格 §5）
 
 | 组件 | 最低 | 推荐 |

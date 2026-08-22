@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Space, Tag, Spin } from 'antd'
+import { Card, Row, Col, Typography, Space, Tag, Spin, Tooltip } from 'antd'
 import {
   ThunderboltOutlined,
   BugOutlined,
@@ -80,14 +80,32 @@ export default function Dashboard() {
     }],
   }
 
-  const healthItems: [string, boolean][] = [
-    ['API', health.api?.ok ?? false],
-    ['Database', health.db?.ok ?? false],
-    ['Redis', health.redis?.ok ?? false],
-    ['Wazuh', health.wazuh?.ok ?? false],
-    ['MISP', health.misp?.ok ?? false],
-    ['AI', health.llm?.ok ?? false],
+  const healthItems: [string, { ok: boolean; status?: string; error?: string }][] = [
+    ['API', health.api ?? { ok: false }],
+    ['Database', health.db ?? { ok: false }],
+    ['Redis', health.redis ?? { ok: false }],
+    ['Wazuh', health.wazuh ?? { ok: false }],
+    ['MISP', health.misp ?? { ok: false }],
+    ['AI', health.llm ?? { ok: false }],
   ]
+
+  const renderHealth = (h: { ok: boolean; status?: string; error?: string }) => {
+    if (h.ok) {
+      return <Tag color="success" icon={<CheckCircleOutlined />}>✓ 正常</Tag>
+    }
+    if (h.status === 'not_configured') {
+      return (
+        <Tooltip title={h.error}>
+          <Tag color="default" icon={<CloseCircleOutlined />}>未配置（可选）</Tag>
+        </Tooltip>
+      )
+    }
+    return (
+      <Tooltip title={h.error}>
+        <Tag color="error" icon={<CloseCircleOutlined />}>✗ 异常</Tag>
+      </Tooltip>
+    )
+  }
 
   return (
     <Spin spinning={loading}>
@@ -109,14 +127,10 @@ export default function Dashboard() {
         <Col span={8}>
           <Card size="small" title="系统健康状态">
             <Space direction="vertical" style={{ width: '100%' }}>
-              {healthItems.map(([name, ok]) => (
+              {healthItems.map(([name, h]) => (
                 <Space key={name} style={{ justifyContent: 'space-between', width: '100%' }}>
                   <Typography.Text>{name}</Typography.Text>
-                  {ok ? (
-                    <Tag color="success" icon={<CheckCircleOutlined />}>✓ 正常</Tag>
-                  ) : (
-                    <Tag color="error" icon={<CloseCircleOutlined />}>✗ 异常</Tag>
-                  )}
+                  {renderHealth(h)}
                 </Space>
               ))}
             </Space>

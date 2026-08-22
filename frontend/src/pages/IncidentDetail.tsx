@@ -59,7 +59,7 @@ export default function IncidentDetail() {
   const analyze = async () => {
     setAnalyzing(true)
     try {
-      const r = await api.post(`/incidents/${id}/analyze`)
+      const r = await api.post(`/incidents/${id}/analyze`, { force: true })
       message.success(`AI 研判完成，风险等级：${r.data?.results?.risk?.risk_level ?? '—'}`)
       load()
     } catch {

@@ -48,7 +48,17 @@
 - Docker Engine 25+（Windows 用户：Docker Desktop + WSL2）
 - 建议硬件：8 核 CPU / 16 GB RAM / 100 GB 磁盘（Wazuh 较重，规格 §5）
 
-### 安装（二选一）
+### 一键安装（推荐）—— 交互式向导
+
+向导会自动：检测 Docker → **探测可用镜像源**（Docker Hub 不通时自动切换镜像站）→
+引导配置 AI 接入（mock / OpenAI 兼容 / Ollama）→ 生成 `.env` → 构建启动 → 健康检查。
+
+```bash
+git clone https://github.com/buoluotou/secflow-ai.git secflow-ai && cd secflow-ai
+./scripts/setup.sh          # 交互式；或 ./scripts/setup.sh --auto 全默认
+```
+
+### 手动安装（二选一）
 
 **Linux**
 
@@ -66,7 +76,7 @@ git clone https://github.com/buoluotou/secflow-ai.git secflow-ai; cd secflow-ai
 .\scripts\windows\start.ps1
 ```
 
-### 登录
+### 登录与 AI 接入
 
 打开 http://localhost —— 首次启动自动创建管理员：
 
@@ -74,6 +84,10 @@ git clone https://github.com/buoluotou/secflow-ai.git secflow-ai; cd secflow-ai
 用户名: admin
 密码:   Admin@123456   ⚠️ 首次登录后请立即修改！
 ```
+
+AI 研判默认 **mock 离线模式**（零配置可跑通全流程）。接入真实模型
+（DeepSeek / OpenAI / Ollama）见 **[docs/ai-setup.md](docs/ai-setup.md)**
+或登录后 **Settings → AI 接入向导**。
 
 ### 验证
 
