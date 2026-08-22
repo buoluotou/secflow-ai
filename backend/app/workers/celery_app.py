@@ -32,3 +32,8 @@ celery_app.conf.update(
         },
     },
 )
+
+# Make this app the process-wide default so `@shared_task` proxies (e.g.
+# `run_nuclei_scan.delay()` from the API) resolve to OUR broker instead of
+# a fresh default celery app (amqp://localhost:5672) that nobody listens on.
+celery_app.set_default()

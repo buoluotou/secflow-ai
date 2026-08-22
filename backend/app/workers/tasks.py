@@ -13,6 +13,12 @@ from datetime import datetime, timedelta, timezone
 
 from celery import shared_task
 
+# Register the SecFlow celery app as the process-wide default so that
+# `@shared_task` proxies resolve to OUR broker (redis), not the bare
+# default celery app (amqp://localhost:5672). Importing this module from
+# anywhere (API route, worker CLI) triggers the registration.
+from app.workers.celery_app import celery_app  # noqa: F401
+
 from app.core.database import session_scope
 from app.core.logging import get_logger
 from app.models.analysis import ScanJob
@@ -82,9 +88,13 @@ def run_nuclei_scan(self, scan_job_id: str) -> dict:
             logger.info("scan %s done: %s findings", scan_job_id, findings_created)
             return job.result_summary
         except Exception as exc:  # noqa: BLE001
+            # Persist the failure BEFORE the session_scope rollback would
+            # discard it — the exception still propagates to Celery so the
+            # task is recorded as failed.
             job.status = "failed"
             job.finished_at = datetime.now(timezone.utc)
             job.error = str(exc)[:2000]
+            db.commit()
             logger.error("scan %s failed: %s", scan_job_id, exc)
             raise
 
@@ -108,13 +118,21 @@ def sync_wazuh_events() -> dict:
             parsed = parse_alert(alert)
             values = map_to_event(parsed)
             event = upsert_event(db, values)
-            if event.id not in [e.id for e in db.query(SecurityEvent).all()]:
+            if not values.get("external_id") or event.id not in existing_ids(db):
                 created += 1
             incident = CorrelationEngine(db).on_event(event)
             if incident:
                 incidents.append(incident.id)
         logger.info("wazuh sync: %s alerts, %s incidents", len(alerts), len(incidents))
         return {"alerts": len(alerts), "incidents": incidents}
+
+
+def existing_ids(db) -> set[str]:
+    """All stored SecurityEvent ids — computed ONCE per sync (avoids an
+    O(n) query inside the per-alert loop)."""
+    from app.models.security import SecurityEvent
+
+    return {e.id for e in db.query(SecurityEvent.id).all()}
 
 
 def db_first_lookback(db) -> int:
