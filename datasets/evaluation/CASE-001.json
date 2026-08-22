@@ -1,0 +1,38 @@
+{
+  "case_id": "CASE-001",
+  "description": "Web 服务器被扫描出高危漏洞，同时同资产出现 Wazuh 命令执行告警，源 IP 命中 MISP 恶意 IOC",
+  "input": {
+    "incident": {"id": "INC-001", "title": "[HIGH] RCE on web-01", "status": "new", "severity": "high"},
+    "current_event": [
+      {
+        "id": "EVT-001", "source": "wazuh", "event_type": "Command execution detected",
+        "timestamp": "2026-08-22T09:15:00Z", "user": "www-data", "src_ip": "45.83.66.101",
+        "dst_ip": "10.10.10.10", "severity": "high", "confidence": 0.9,
+        "indicators": ["45.83.66.101"], "techniques": ["T1059.001"], "raw_data": {}
+      }
+    ],
+    "asset": [
+      {"id": "AST-001", "name": "web-01", "hostname": "web-01", "ip": "10.10.10.10",
+       "asset_type": "server", "environment": "production", "criticality": 5, "status": "active"}
+    ],
+    "history": [],
+    "findings": [
+      {"id": "FND-001", "template_id": "http-vuln-cve2017-5638", "title": "Apache Struts2 RCE",
+       "severity": "critical", "cvss": 9.8, "cwe": "CWE-78", "status": "open"}
+    ],
+    "threat_intel": [
+      {"id": "IOC-001", "type": "ip", "value": "45.83.66.101", "confidence": 0.95, "tags": ["apt", "c2"]}
+    ],
+    "evidence": [
+      {"id": "E001", "type": "wazuh_alert", "source": "wazuh", "title": "Command execution detected"},
+      {"id": "E002", "type": "nuclei_finding", "source": "nuclei", "title": "Apache Struts2 RCE"},
+      {"id": "E003", "type": "misp_ioc", "source": "misp", "title": "IOC ip: 45.83.66.101"},
+      {"id": "E004", "type": "asset_info", "source": "asset", "title": "web-01 production server"}
+    ],
+    "attack_context": {"techniques": ["T1059.001"], "stage": "execution"}
+  },
+  "expected_classification": "true_positive",
+  "expected_severity": "critical",
+  "expected_techniques": ["T1059.001"],
+  "expected_evidence": ["E001", "E002", "E003"]
+}

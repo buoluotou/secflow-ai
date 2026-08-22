@@ -1,0 +1,26 @@
+{
+  "case_id": "CASE-004",
+  "description": "低危漏洞发现，无事件无 IOC——仅信息收集，不应升级为事件",
+  "input": {
+    "incident": {"id": "INC-004", "title": "[MEDIUM] TLS version outdated on mail-01", "status": "new", "severity": "medium"},
+    "current_event": [],
+    "asset": [
+      {"id": "AST-030", "name": "mail-01", "hostname": "mail-01", "ip": "172.16.1.20",
+       "asset_type": "server", "environment": "production", "criticality": 3, "status": "active"}
+    ],
+    "history": [],
+    "findings": [
+      {"id": "FND-030", "template_id": "ssl-tls-detect", "title": "SSL TLS version outdated",
+       "severity": "medium", "cvss": 5.3, "cwe": "CWE-326", "status": "open"}
+    ],
+    "threat_intel": [],
+    "evidence": [
+      {"id": "E030", "type": "nuclei_finding", "source": "nuclei", "title": "SSL TLS version outdated"}
+    ],
+    "attack_context": {"techniques": [], "stage": null}
+  },
+  "expected_classification": "likely_false_positive",
+  "expected_severity": "medium",
+  "expected_techniques": [],
+  "expected_evidence": ["E030"]
+}

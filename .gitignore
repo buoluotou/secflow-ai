@@ -1,0 +1,65 @@
+# --- Environment / secrets (never commit) ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.log
+
+# --- Node / Frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+frontend/vite.config.d.ts
+frontend/vite.config.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# --- Runtime data (never commit) ---
+data/*
+!data/.gitkeep
+logs/*
+!logs/.gitkeep
+reports/generated/
+reports/*.pdf
+reports/*.md
+
+# --- Tests artifacts ---
+backend/test_reports/
+datasets/evaluation/_metrics.json
+
+# --- Databases ---
+*.sqlite
+*.sqlite3
+*.db
+
+# --- Third-party deployment clones (pinned at install time) ---
+deploy/wazuh/wazuh-docker/
+deploy/misp/misp-docker/

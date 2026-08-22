@@ -1,0 +1,29 @@
+{
+  "case_id": "CASE-002",
+  "description": "低危事件：内网主机单次端口扫描命中，无 IOC、无漏洞、资产关键性低",
+  "input": {
+    "incident": {"id": "INC-002", "title": "[LOW] Port scan on workstation-12", "status": "new", "severity": "low"},
+    "current_event": [
+      {
+        "id": "EVT-010", "source": "wazuh", "event_type": "Port scan detected",
+        "timestamp": "2026-08-22T10:02:00Z", "src_ip": "10.20.30.5", "dst_ip": "10.20.30.12",
+        "severity": "low", "confidence": 0.4, "indicators": [], "techniques": ["T1046"], "raw_data": {}
+      }
+    ],
+    "asset": [
+      {"id": "AST-010", "name": "workstation-12", "hostname": "ws-12", "ip": "10.20.30.12",
+       "asset_type": "workstation", "environment": "internal", "criticality": 1, "status": "active"}
+    ],
+    "history": [],
+    "findings": [],
+    "threat_intel": [],
+    "evidence": [
+      {"id": "E010", "type": "wazuh_alert", "source": "wazuh", "title": "Port scan detected"}
+    ],
+    "attack_context": {"techniques": ["T1046"], "stage": "reconnaissance"}
+  },
+  "expected_classification": "likely_false_positive",
+  "expected_severity": "low",
+  "expected_techniques": ["T1046"],
+  "expected_evidence": ["E010"]
+}

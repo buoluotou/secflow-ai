@@ -1,0 +1,34 @@
+{
+  "case_id": "CASE-003",
+  "description": "高危 Wazuh 告警但无任何关联信号（无 IOC、无漏洞、无历史）——需要人工确认",
+  "input": {
+    "incident": {"id": "INC-003", "title": "[HIGH] Suspicious powershell on dc-01", "status": "new", "severity": "high"},
+    "current_event": [
+      {
+        "id": "EVT-020", "source": "wazuh", "event_type": "Powershell execution",
+        "timestamp": "2026-08-22T11:40:00Z", "user": "svc_backup", "src_ip": "10.0.0.9", "dst_ip": "10.0.0.1",
+        "severity": "high", "confidence": 0.7, "indicators": [], "techniques": ["T1059.001"], "raw_data": {}
+      }
+    ],
+    "asset": [
+      {"id": "AST-020", "name": "dc-01", "hostname": "dc-01", "ip": "10.0.0.1",
+       "asset_type": "server", "environment": "production", "criticality": 5, "status": "active"}
+    ],
+    "history": [
+      {"id": "EVT-019", "source": "wazuh", "event_type": "Powershell execution", "timestamp": "2026-08-20T23:12:00Z",
+       "user": "svc_backup", "src_ip": "10.0.0.9", "dst_ip": "10.0.0.1", "severity": "high", "confidence": 0.6,
+       "indicators": [], "techniques": ["T1059.001"], "raw_data": {}}
+    ],
+    "findings": [],
+    "threat_intel": [],
+    "evidence": [
+      {"id": "E020", "type": "wazuh_alert", "source": "wazuh", "title": "Powershell execution"},
+      {"id": "E021", "type": "historical_event", "source": "history", "title": "Powershell execution (2 days ago)"}
+    ],
+    "attack_context": {"techniques": ["T1059.001"], "stage": "execution"}
+  },
+  "expected_classification": "true_positive",
+  "expected_severity": "high",
+  "expected_techniques": ["T1059.001"],
+  "expected_evidence": ["E020", "E021"]
+}

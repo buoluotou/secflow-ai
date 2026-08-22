@@ -1,0 +1,144 @@
+# =====================================================================
+# SecFlow AI — Docker Compose (spec §44)
+#
+# SecFlow 自己控制: secflow-api / secflow-worker / secflow-scheduler /
+#                   secflow-frontend / postgres / redis
+#
+# Wazuh 与 MISP 保持独立 Compose（deploy/ 目录脚本按需部署），
+# 第三方组件不强行塞进同一个 Compose 文件。
+# =====================================================================
+
+name: secflow
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-secflow}
+      POSTGRES_USER: ${POSTGRES_USER:-secflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - secflow-internal
+
+  redis:
+    image: redis:7-alpine
+    container_name: secflow-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - secflow-internal
+
+  secflow-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: secflow-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - secflow_data:/data
+      - secflow_logs:/logs
+      - secflow_reports:/reports
+    ports:
+      - "${API_PORT:-8000}:8000"
+    networks:
+      - secflow-internal
+      - secflow-net
+
+  secflow-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: secflow-worker
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app worker --loglevel=INFO --concurrency=2
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - secflow_data:/data
+      - secflow_logs:/logs
+      - secflow_reports:/reports
+      - /var/run/docker.sock:/var/run/docker.sock   # nuclei docker mode
+    networks:
+      - secflow-internal
+      - secflow-net
+
+  secflow-scheduler:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: secflow-scheduler
+    restart: unless-stopped
+    command: celery -A app.workers.celery_app beat --loglevel=INFO
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - secflow-internal
+
+  secflow-frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: secflow-frontend
+    restart: unless-stopped
+    depends_on:
+      - secflow-api
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    networks:
+      - secflow-net
+
+volumes:
+  postgres_data:
+  redis_data:
+  secflow_data:
+  secflow_logs:
+  secflow_reports:
+
+# 三个网络层 (spec §45):
+#   secflow-net      — 对外服务网络 (frontend ↔ api ↔ 第三方组件)
+#   secflow-internal — 内部组件网络 (db / redis / worker)
+#   wazuh-internal / misp-internal 由各自独立 Compose 创建
+networks:
+  secflow-net:
+    name: secflow-net
+    external: true
+  secflow-internal:
+    name: secflow-internal
+    driver: bridge

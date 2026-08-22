@@ -1,0 +1,115 @@
+# =====================================================================
+# SecFlow AI — development compose (spec §44)
+#   docker compose -f docker-compose.dev.yml up -d
+#
+# 特点：挂载源码热重载、API 端口 8000 暴露、前端 Vite dev server 5173
+# =====================================================================
+
+name: secflow-dev
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: secflow-dev-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-secflow}
+      POSTGRES_USER: ${POSTGRES_USER:-secflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-CHANGE_ME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-secflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: secflow-dev-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  secflow-api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: secflow-dev-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./integrations:/app/integrations
+      - ./ai:/app/ai
+      - ./risk:/app/risk
+      - ./reports:/app/reports
+      - ./data:/data
+      - ./logs:/logs
+      - ./reports:/reports
+
+  secflow-worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: secflow-dev-worker
+    command: celery -A app.workers.celery_app worker --loglevel=INFO
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/app:/app/app
+      - ./integrations:/app/integrations
+      - ./ai:/app/ai
+      - ./risk:/app/risk
+      - ./reports:/app/reports
+      - ./data:/data
+      - ./logs:/logs
+      - ./reports:/reports
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  secflow-scheduler:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: secflow-dev-scheduler
+    command: celery -A app.workers.celery_app beat --loglevel=INFO
+    env_file: .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  frontend-dev:
+    image: node:20-alpine
+    container_name: secflow-dev-frontend
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+
+volumes:
+  postgres_dev:
