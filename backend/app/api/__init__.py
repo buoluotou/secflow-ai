@@ -1,7 +1,7 @@
 """API router aggregation (spec §51)."""
 from fastapi import APIRouter
 
-from app.api import analysis, assets, audit, auth, copilot, events, findings, health, incidents, iocs, maintenance, projects, reports, scans, settings
+from app.api import analysis, assets, audit, auth, copilot, demo, events, findings, health, incidents, iocs, maintenance, projects, reports, scans, settings
 from integrations.wazuh.webhook import router as wazuh_webhook
 
 api_router = APIRouter(prefix="/api")
@@ -20,4 +20,5 @@ api_router.include_router(audit.router)
 api_router.include_router(settings.router)
 api_router.include_router(maintenance.router)
 api_router.include_router(copilot.router)
+api_router.include_router(demo.router)
 api_router.include_router(wazuh_webhook)

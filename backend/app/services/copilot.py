@@ -171,6 +171,29 @@ def _tool_generate_report(db: Session, args: dict) -> ToolResult:
                       {"report_id": report.id, "title": report.title})
 
 
+def _tool_analyze_incident(db: Session, args: dict) -> ToolResult:
+    from app.models.incident import Incident
+    from app.services.analysis import AnalysisService
+
+    incident_id = args.get("incident_id")
+    incident = db.get(Incident, incident_id) if incident_id else db.query(Incident).first()
+    if not incident:
+        return ToolResult(False, "没有可分析的事件，请先产生事件（扫描或告警）")
+    results = AnalysisService(db).analyze_incident(incident, force=True)
+    db.commit()
+    triage = results.get("triage") or {}
+    risk = results.get("risk") or {}
+    return ToolResult(
+        True,
+        f"AI 研判完成：{triage.get('classification', '—')} / {triage.get('severity', '—')}"
+        f"，风险 {risk.get('risk_score', '—')}（{risk.get('risk_level', '—')}）",
+        {"incident_id": incident.id, "classification": triage.get("classification"),
+         "severity": triage.get("severity"), "risk_score": risk.get("risk_score"),
+         "risk_level": risk.get("risk_level"),
+         "recommendations": triage.get("recommendations", [])},
+    )
+
+
 def _tool_iocs(db: Session, args: dict) -> ToolResult:
     from app.models.security import IOC
 
@@ -227,6 +250,7 @@ def _tool_help(db: Session, args: dict) -> ToolResult:
 
 TOOLS: dict[str, tuple[str, object]] = {
     "scan": ("发起漏洞扫描", _tool_scan),
+    "analyze_incident": ("AI 研判事件", _tool_analyze_incident),
     "findings": ("查询漏洞", _tool_findings),
     "incidents": ("查询安全事件 / 应急响应", _tool_incidents),
     "audit": ("日志审查", _tool_audit),

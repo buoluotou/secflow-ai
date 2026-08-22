@@ -278,11 +278,21 @@ function DataManager() {
         message="清空数据将删除全部事件、漏洞、扫描、报告与审计记录（用户账号和 AI 配置保留），不可恢复！"
       />
       <Space>
+        <Button type="primary" onClick={async () => {
+          const r = await api.post('/demo/seed')
+          message.success(r.data.message)
+          load()
+        }}>加载演示数据（Wazuh 告警 / IOC / 事件）</Button>
         <Button icon={<ReloadOutlined />} onClick={load}>刷新统计</Button>
         <Popconfirm title="确认清空全部业务数据？此操作不可恢复！" onConfirm={resetData}>
           <Button danger>清空全部数据</Button>
         </Popconfirm>
       </Space>
+      <Alert
+        type="info" showIcon
+        message="未部署 Wazuh / MISP 也能体验完整流程"
+        description="「加载演示数据」会注入一组 Wazuh 风格告警、MISP 风格 IOC 与资产，并自动关联生成安全事件。真实接入：运行 ./scripts/deploy-wazuh-misp.sh 一键部署并自动写入 .env。"
+      />
     </Space>
   )
 }

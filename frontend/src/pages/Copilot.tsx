@@ -3,11 +3,14 @@ import { Card, Input, Button, Space, Typography, Tag, List, Spin, Empty } from '
 import { SendOutlined, RobotOutlined, UserOutlined, BulbOutlined } from '@ant-design/icons'
 import { api } from '../services/api'
 
+interface AgentStep { thought: string; action?: string; result?: string; ok?: boolean }
+
 interface Msg {
   role: 'user' | 'assistant'
   content: string
   tool?: string
   data?: Record<string, unknown>
+  steps?: AgentStep[]
 }
 
 interface ToolInfo { name: string; label: string; example: string }
@@ -42,8 +45,9 @@ export default function Copilot() {
       setMessages((ms) => [...ms, {
         role: 'assistant',
         content: r.data.reply,
-        tool: r.data.tool_label,
+        tool: r.data.tool,
         data: r.data.data,
+        steps: r.data.steps,
       }])
     } catch (e: unknown) {
       setMessages((ms) => [...ms, {
@@ -116,12 +120,13 @@ export default function Copilot() {
           <Empty
             description={
               <Space direction="vertical" style={{ textAlign: 'left', maxWidth: 520 }}>
-                <Typography.Text>你好，我是 SecFlow AI 安全助手。可以直接用自然语言下达任务，例如：</Typography.Text>
+                <Typography.Text>你好，我是 SecFlow AI 安全助手。我会像真实安全工程师一样：先思考、再调用系统工具执行、观察结果后继续，直到完成任务。试试：</Typography.Text>
                 <Typography.Text>🔍 “扫描 http://demo.local” —— 发起漏洞扫描</Typography.Text>
                 <Typography.Text>🚨 “应急响应，查看未处理事件” —— 列出待处置事件</Typography.Text>
                 <Typography.Text>📄 “为最近的事件生成报告” —— 自动撰写安全报告</Typography.Text>
                 <Typography.Text>🔏 “审查今天的操作日志” —— 日志合规审查</Typography.Text>
                 <Typography.Text>🛡️ “系统安全吗？给防护建议” —— 安全防护评估</Typography.Text>
+                <Typography.Text>🧭 “全面安全巡检” —— 我会自动拆解：健康检查→事件→漏洞→日志，多步完成</Typography.Text>
               </Space>
             }
           />
@@ -142,6 +147,21 @@ export default function Copilot() {
                   border: m.role === 'user' ? 'none' : '1px solid #f0f0f0',
                 }}
               >
+                {m.steps && m.steps.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    {m.steps.map((st, j) => (
+                      <div key={j} style={{ marginBottom: 4, fontSize: 12 }}>
+                        <Tag color={st.ok ? 'green' : 'red'} style={{ marginRight: 6, fontSize: 11 }}>
+                          {st.action ?? '思考'}
+                        </Tag>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          {st.thought}
+                          {st.result ? ` → ${st.result.slice(0, 90)}${st.result.length > 90 ? '…' : ''}` : ''}
+                        </Typography.Text>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {m.content}
                 {renderData(m)}
               </div>

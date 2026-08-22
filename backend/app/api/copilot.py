@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.organization import User
-from app.services.copilot import TOOLS, CopilotService
+from app.services.copilot import TOOLS
 
 logger = logging.getLogger(__name__)
 
@@ -51,9 +51,28 @@ EXAMPLE = {
 @router.post("/chat")
 def copilot_chat(body: ChatIn, db: Session = Depends(get_db),
                  _: User = Depends(get_current_user)) -> dict:
+    """Agentic chat: the SecurityAgent reasons → acts → observes → answers.
+    Returns the full reasoning trace (steps) so the UI can show HOW it worked.
+    """
     try:
-        return CopilotService(db).handle(body.message, body.history)
+        from app.services.agent import SecurityAgent
+
+        result = SecurityAgent(db).run(body.message)
+        return {
+            "reply": result.final_answer,
+            "steps": [
+                {
+                    "thought": st.thought,
+                    "action": st.action,
+                    "result": st.result,
+                    "ok": st.ok,
+                }
+                for st in result.steps
+            ],
+            "tool": result.tool,
+            "data": result.data,
+        }
     except Exception as exc:  # noqa: BLE001
-        logger.exception("copilot chat failed")
+        logger.exception("copilot agent failed")
         raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR,
                             f"助手执行失败: {exc}") from exc
