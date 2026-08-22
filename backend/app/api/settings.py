@@ -72,11 +72,19 @@ def save_llm(body: LLMSettingsIn, db: Session = Depends(get_db),
 
 @router.post("/llm/test")
 def test_llm(_: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    client = LLMClient(get_llm_config(db))
+    """Test the REAL LLM endpoint. Mock mode has no endpoint — the response
+    is honest about it instead of pretending the AI is connected."""
+    cfg = get_llm_config(db)
+    if cfg.provider == "mock":
+        return {"ok": False, "status": "mock", "provider": "mock", "model": None,
+                "error": "未接入真实模型（当前为 Mock 模式）— 请先选择服务商并配置密钥"}
+    client = LLMClient(cfg)
     info = client.health()
     if info.get("ok"):
         return {"ok": True, "provider": client.provider, "model": client.config.model}
-    return {"ok": False, "provider": client.provider, "error": info.get("error", "连接失败")}
+    return {"ok": False, "provider": client.provider,
+            "model": client.config.model,
+            "error": info.get("error", "连接失败")}
 
 
 @router.delete("/llm")

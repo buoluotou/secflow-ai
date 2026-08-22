@@ -20,13 +20,25 @@ class LLMConfig:
         temperature: float = 0.2,
         max_tokens: int = 4096,
     ):
-        self.provider = provider if provider in PROVIDERS else "openai-compatible"
+        # Keep the ORIGINAL provider name (deepseek/qwen/custom/...) for
+        # display; transport is derived separately for the HTTP client.
+        self.provider = provider or "mock"
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.model = model or self._default_model()
         self.timeout = timeout
         self.temperature = temperature
         self.max_tokens = max_tokens
+
+    @property
+    def transport(self) -> str:
+        """HTTP transport: mock | ollama | openai-compatible.
+
+        deepseek/qwen/custom/... all speak the OpenAI-compatible protocol.
+        """
+        if self.provider in ("mock", "ollama"):
+            return self.provider
+        return "openai-compatible"
 
     @classmethod
     def from_env(cls) -> "LLMConfig":

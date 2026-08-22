@@ -61,13 +61,22 @@ def get_llm_config(db: Session | None = None) -> LLMConfig:
 
 def set_llm_config(db: Session, provider: str, api_key: str = "",
                    base_url: str = "", model: str = "") -> dict:
-    """Persist LLM config from the Settings page (runtime, immediate)."""
+    """Persist LLM config from the Settings page (runtime, immediate).
+
+    Validation is strict so the UI can never show a "connected" state that
+    is not backed by a real endpoint + key:
+      - preset vendors (deepseek/openai/qwen) REQUIRE an API key
+      - custom requires base_url + model (key optional — private gateways)
+      - mock / ollama need no key
+    """
     if provider not in PROVIDER_PRESETS:
         raise ValueError(f"未知服务商: {provider}")
     preset = PROVIDER_PRESETS[provider]
     if provider == "custom":
         if not base_url or not model:
             raise ValueError("自定义服务商需要填写 Base URL 与模型名")
+    elif preset.get("needs_key") and not api_key.strip():
+        raise ValueError(f"{preset['label']} 需要填写 API 密钥")
     value = {
         "provider": provider,
         "api_key": api_key.strip() or "",

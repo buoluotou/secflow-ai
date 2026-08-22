@@ -7,6 +7,7 @@ import {
   HddOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  RobotOutlined,
 } from '@ant-design/icons'
 import { api, healthApi } from '../services/api'
 import type { Asset, Finding, Incident, SecurityEvent } from '../services/types'
@@ -89,7 +90,15 @@ export default function Dashboard() {
     ['AI', health.llm ?? { ok: false }],
   ]
 
-  const renderHealth = (h: { ok: boolean; status?: string; error?: string }) => {
+  const renderHealth = (h: { ok: boolean; status?: string; error?: string; provider?: string }) => {
+    if (h.status === 'mock') {
+      // AI 功能可用但未接入真实模型 —— 明确标注，不冒充"正常"
+      return (
+        <Tooltip title={h.error || 'Mock 离线规则模式'}>
+          <Tag color="blue" icon={<RobotOutlined />}>Mock 模式（未接入真实 AI）</Tag>
+        </Tooltip>
+      )
+    }
     if (h.ok) {
       return <Tag color="success" icon={<CheckCircleOutlined />}>✓ 正常</Tag>
     }

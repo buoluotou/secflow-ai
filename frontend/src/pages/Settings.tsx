@@ -42,7 +42,7 @@ function AiSetup() {
   const [model, setModel] = useState('')
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
-  const [testResult, setTestResult] = useState<{ ok: boolean; provider?: string; model?: string; error?: string } | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; status?: string; provider?: string; model?: string; error?: string } | null>(null)
 
   const load = async () => {
     const [p, c] = await Promise.all([
@@ -89,7 +89,8 @@ function AiSetup() {
     try {
       const r = await api.post('/settings/llm/test')
       setTestResult(r.data)
-      if (r.data.ok) message.success('✅ AI 连接正常')
+      if (r.data.ok) message.success('✅ 真实模型连接正常')
+      else if (r.data.status === 'mock') message.warning('未接入真实模型（当前为 Mock 模式）')
       else message.warning(`连接失败：${r.data.error}`)
     } catch {
       setTestResult({ ok: false, error: '请求失败' })
@@ -166,9 +167,13 @@ function AiSetup() {
 
       {testResult && (
         <Alert
-          type={testResult.ok ? 'success' : 'error'}
+          type={testResult.ok ? 'success' : testResult.status === 'mock' ? 'warning' : 'error'}
           showIcon
-          message={testResult.ok ? `连接正常：${testResult.provider} / ${testResult.model}` : `连接失败：${testResult.error}`}
+          message={testResult.ok
+            ? `✅ 真实模型连接正常：${testResult.provider} / ${testResult.model}`
+            : testResult.status === 'mock'
+              ? '未接入真实模型（当前为 Mock 离线模式）'
+              : `连接失败：${testResult.error}`}
         />
       )}
 
@@ -176,10 +181,12 @@ function AiSetup() {
         <Alert
           type={current.provider === 'mock' ? 'warning' : 'success'}
           showIcon
-          message={`当前状态：${providers[current.provider]?.label ?? current.provider}${current.model ? `（${current.model}）` : ''}`}
+          message={current.provider === 'mock'
+            ? '当前状态：Mock 离线模式（未接入真实 AI）'
+            : `当前状态：已接入 ${providers[current.provider]?.label ?? current.provider}${current.model ? `（${current.model}）` : ''}`}
           description={current.provider === 'mock'
-            ? '未接入真实模型——AI 研判使用内置规则。配置密钥后即可获得真实 AI 分析能力。'
-            : '已接入真实模型，AI 研判将调用该模型。'}
+            ? '系统 AI 功能可用（内置规则），但未调用任何真实模型。配置服务商与密钥后即可获得真实 AI 研判。'
+            : 'AI 研判将调用该真实模型；若密钥失效或额度不足，分析会返回错误提示。'}
         />
       )}
     </Space>

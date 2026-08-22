@@ -85,10 +85,18 @@ def health_misp() -> dict:
 
 @router.get("/llm")
 def health_llm(db: Session = Depends(get_db)) -> dict:
-    client = LLMClient(get_llm_config(db))
+    """LLM health is HONEST about mock mode: the system works, but NO real
+    model is connected until the user configures a provider + key."""
+    cfg = get_llm_config(db)
+    if cfg.provider == "mock":
+        return {"ok": True, "status": "mock", "provider": "mock", "model": None,
+                "error": None, "detail": "未接入真实模型（Mock 离线规则模式）— 请在设置中配置密钥"}
+    client = LLMClient(cfg)
     info = client.health()
     return _tri("ok" if info.get("ok") else "error", info.get("ok", False),
-                info.get("error") if not info.get("ok") else None)
+                info.get("error") if not info.get("ok") else None) | {
+        "provider": cfg.provider, "model": cfg.model,
+    }
 
 
 @router.get("/config")
