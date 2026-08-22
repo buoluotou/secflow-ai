@@ -4,9 +4,9 @@ import {
   DashboardOutlined,
   AlertOutlined,
   BugOutlined,
-  ScanOutlined,
   FileTextOutlined,
-  SettingOutlined,
+  SearchOutlined,
+  ToolOutlined,
   LogoutOutlined,
   UserOutlined,
 } from '@ant-design/icons'
@@ -16,14 +16,14 @@ import { authApi } from '../services/api'
 
 const { Sider, Header, Content } = Layout
 
-// 精简菜单：只保留核心工作流
+// 安服大模块导航：总览 / 事件响应 / 漏洞管理 / 安全报告 / 日志审查 / 系统维护
 const MENU = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '总览' },
-  { key: '/incidents', icon: <AlertOutlined />, label: '安全事件' },
-  { key: '/findings', icon: <BugOutlined />, label: '漏洞' },
-  { key: '/scans', icon: <ScanOutlined />, label: '扫描' },
-  { key: '/reports', icon: <FileTextOutlined />, label: '报告' },
-  { key: '/settings', icon: <SettingOutlined />, label: '设置' },
+  { key: '/incidents', icon: <AlertOutlined />, label: '事件响应' },
+  { key: '/findings', icon: <BugOutlined />, label: '漏洞管理' },
+  { key: '/reports', icon: <FileTextOutlined />, label: '安全报告' },
+  { key: '/audit', icon: <SearchOutlined />, label: '日志审查' },
+  { key: '/maintenance', icon: <ToolOutlined />, label: '系统维护' },
 ]
 
 export default function MainLayout() {
@@ -44,14 +44,13 @@ export default function MainLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider theme="dark" width={170}>
+      <Sider theme="dark" width={180}>
         <div style={{ padding: '14px 16px', color: '#fff', fontWeight: 700, fontSize: 15 }}>
           🛡️ SecFlow
+          <div style={{ fontSize: 11, fontWeight: 400, opacity: 0.7, marginTop: 2 }}>安全服务</div>
         </div>
         <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[selectedKey]}
+          theme="dark" mode="inline" selectedKeys={[selectedKey]}
           items={MENU}
           onClick={({ key }) => navigate(key)}
         />

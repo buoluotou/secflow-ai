@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_admin
@@ -72,3 +73,25 @@ def bootstrap_admin(body: UserCreate, db: Session = Depends(get_db)) -> TokenRes
     log_audit(db, "user.bootstrap_admin", "user", user.id, username=user.username)
     db.commit()
     return TokenResponse(access_token=create_access_token(user.id, user.role))
+
+
+class ChangePasswordIn(BaseModel):
+    old_password: str
+    new_password: str = Field(min_length=8, max_length=128)
+
+
+@router.post("/change-password")
+def change_password(body: ChangePasswordIn, request: Request,
+                    db: Session = Depends(get_db),
+                    user: User = Depends(get_current_user)) -> dict:
+    """Change the current user's password (system maintenance)."""
+    if not verify_password(body.old_password, user.hashed_password):
+        log_audit(db, "auth.password_change_failed", "user", user.id,
+                  username=user.username, ip=request.client.host if request.client else None)
+        db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "原密码不正确")
+    user.hashed_password = hash_password(body.new_password)
+    log_audit(db, "auth.password_changed", "user", user.id,
+              username=user.username, ip=request.client.host if request.client else None)
+    db.commit()
+    return {"status": "ok", "message": "密码已修改，下次登录请使用新密码"}

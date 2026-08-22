@@ -193,7 +193,7 @@ export interface AuditLog {
 
 export interface HealthStatus {
   ok: boolean
-  status?: 'ok' | 'not_configured' | 'error'
+  status?: 'ok' | 'not_configured' | 'error' | 'mock'
   status_code?: number
   error?: string
   provider?: string

@@ -1,52 +1,40 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, Typography, Space, Tag, Spin, Tooltip } from 'antd'
+import { Card, Row, Col, Typography, Space, Tag, List } from 'antd'
 import {
-  ThunderboltOutlined,
-  BugOutlined,
-  AlertOutlined,
-  HddOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  RobotOutlined,
+  AlertOutlined, BugOutlined, ScanOutlined,
+  FileTextOutlined, RobotOutlined, CheckCircleOutlined, CloseCircleOutlined,
 } from '@ant-design/icons'
+import { useNavigate } from 'react-router-dom'
 import { api, healthApi } from '../services/api'
-import type { Asset, Finding, Incident, SecurityEvent } from '../services/types'
-import StatCard from '../components/StatCard'
-import TrendChart from '../components/TrendChart'
-import StatusTag from '../components/StatusTag'
-import type { EChartsOption } from 'echarts'
+import type { Incident, HealthStatus } from '../services/types'
 
+// =====================================================================
+// 总览：核心指标 + 系统状态 + 快捷操作 + 最近事件
+// =====================================================================
 export default function Dashboard() {
+  const navigate = useNavigate()
+  const [counts, setCounts] = useState({ incidents: 0, findings: 0, events: 0, reports: 0 })
+  const [health, setHealth] = useState<Record<string, HealthStatus>>({})
+  const [recent, setRecent] = useState<Incident[]>([])
   const [loading, setLoading] = useState(true)
-  const [counts, setCounts] = useState({ events: 0, findings: 0, incidents: 0, assets: 0, critical: 0, high: 0, openFindings: 0 })
-  const [health, setHealth] = useState<Record<string, { ok: boolean }>>({})
-  const [events, setEvents] = useState<SecurityEvent[]>([])
-  const [incidents, setIncidents] = useState<Incident[]>([])
 
   const load = async () => {
-    setLoading(true)
     try {
-      const [eventsR, findingsR, incidentsR, assetsR] = await Promise.all([
-        api.get('/events', { params: { limit: 200 } }).catch(() => ({ data: [] as SecurityEvent[] })),
-        api.get('/findings', { params: { limit: 200 } }).catch(() => ({ data: [] as Finding[] })),
+      const [inc, fnd, ev, rep, h] = await Promise.all([
         api.get('/incidents', { params: { limit: 200 } }).catch(() => ({ data: [] as Incident[] })),
-        api.get('/assets', { params: { limit: 200 } }).catch(() => ({ data: [] as Asset[] })),
+        api.get('/findings', { params: { limit: 200 } }).catch(() => ({ data: [] })),
+        api.get('/events', { params: { limit: 200 } }).catch(() => ({ data: [] })),
+        api.get('/reports').catch(() => ({ data: [] })),
+        healthApi.all(),
       ])
-      const evs = eventsR.data as SecurityEvent[]
-      const fnds = findingsR.data as Finding[]
-      const inss = incidentsR.data as Incident[]
-      setEvents(evs)
-      setIncidents(inss)
       setCounts({
-        events: evs.length,
-        findings: fnds.length,
-        incidents: inss.length,
-        assets: (assetsR.data as Asset[]).length,
-        critical: inss.filter((i) => i.severity === 'critical').length,
-        high: inss.filter((i) => i.severity === 'high').length,
-        openFindings: fnds.filter((f) => f.status === 'open').length,
+        incidents: (inc.data as Incident[]).length,
+        findings: fnd.data.length,
+        events: ev.data.length,
+        reports: rep.data.length,
       })
-      setHealth(await healthApi.all())
+      setRecent((inc.data as Incident[]).slice(0, 8))
+      setHealth(h)
     } finally {
       setLoading(false)
     }
@@ -58,120 +46,116 @@ export default function Dashboard() {
     return () => clearInterval(t)
   }, [])
 
-  const sevCount = (sev: string) => events.filter((e) => e.severity === sev).length
+  const openIncidents = recent.filter((i) => !['closed', 'resolved'].includes(i.status)).length
+  const critical = recent.filter((i) => i.severity === 'critical' || i.severity === 'high').length
 
-  const eventTrend: EChartsOption = {
-    title: { text: '安全事件趋势 (按严重性)' },
-    tooltip: { trigger: 'axis' },
-    xAxis: { type: 'category', data: ['Critical', 'High', 'Medium', 'Low', 'Info'] },
-    yAxis: { type: 'value' },
-    series: [{ type: 'bar', data: ['critical', 'high', 'medium', 'low', 'info'].map(sevCount), itemStyle: { color: '#cf1322' } }],
-  }
-
-  const incidentTrend: EChartsOption = {
-    title: { text: '事件状态分布' },
-    tooltip: { trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: '60%',
-      data: ['new', 'triaging', 'investigating', 'awaiting_review', 'approved', 'resolved', 'closed'].map((s) => ({
-        name: s,
-        value: incidents.filter((i) => i.status === s).length,
-      })),
-    }],
-  }
-
-  const healthItems: [string, { ok: boolean; status?: string; error?: string }][] = [
-    ['API', health.api ?? { ok: false }],
-    ['Database', health.db ?? { ok: false }],
-    ['Redis', health.redis ?? { ok: false }],
-    ['Wazuh', health.wazuh ?? { ok: false }],
-    ['MISP', health.misp ?? { ok: false }],
-    ['AI', health.llm ?? { ok: false }],
+  const statusLine: [string, HealthStatus | undefined][] = [
+    ['API', health.api], ['数据库', health.db], ['Redis', health.redis],
+    ['AI', health.llm], ['Wazuh', health.wazuh], ['MISP', health.misp],
   ]
 
-  const renderHealth = (h: { ok: boolean; status?: string; error?: string; provider?: string }) => {
-    if (h.status === 'mock') {
-      // AI 功能可用但未接入真实模型 —— 明确标注，不冒充"正常"
-      return (
-        <Tooltip title={h.error || 'Mock 离线规则模式'}>
-          <Tag color="blue" icon={<RobotOutlined />}>Mock 模式（未接入真实 AI）</Tag>
-        </Tooltip>
-      )
-    }
-    if (h.ok) {
-      return <Tag color="success" icon={<CheckCircleOutlined />}>✓ 正常</Tag>
-    }
-    if (h.status === 'not_configured') {
-      return (
-        <Tooltip title={h.error}>
-          <Tag color="default" icon={<CloseCircleOutlined />}>未配置（可选）</Tag>
-        </Tooltip>
-      )
-    }
-    return (
-      <Tooltip title={h.error}>
-        <Tag color="error" icon={<CloseCircleOutlined />}>✗ 异常</Tag>
-      </Tooltip>
-    )
+  const renderStatus = (h?: HealthStatus) => {
+    if (!h) return <Tag>…</Tag>
+    if (h.status === 'mock') return <Tag color="blue" icon={<RobotOutlined />}>Mock</Tag>
+    if (h.ok) return <Tag color="success" icon={<CheckCircleOutlined />}>正常</Tag>
+    if (h.status === 'not_configured') return <Tag>未配置</Tag>
+    return <Tag color="error" icon={<CloseCircleOutlined />}>异常</Tag>
   }
 
+  const shortcuts = [
+    { label: '发起扫描', icon: <ScanOutlined />, to: '/findings?tab=scans' },
+    { label: '查看事件', icon: <AlertOutlined />, to: '/incidents' },
+    { label: '漏洞管理', icon: <BugOutlined />, to: '/findings' },
+    { label: '安全报告', icon: <FileTextOutlined />, to: '/reports' },
+  ]
+
   return (
-    <Spin spinning={loading}>
-      <Row gutter={[16, 16]}>
-        <Col span={4}><StatCard title="Total Events" value={counts.events} icon={<ThunderboltOutlined />} /></Col>
-        <Col span={4}><StatCard title="Critical" value={counts.critical} color="#cf1322" /></Col>
-        <Col span={4}><StatCard title="High" value={counts.high} color="#fa541c" /></Col>
-        <Col span={4}><StatCard title="Open Findings" value={counts.openFindings} icon={<BugOutlined />} /></Col>
-        <Col span={4}><StatCard title="Open Incidents" value={counts.incidents} icon={<AlertOutlined />} /></Col>
-        <Col span={4}><StatCard title="Assets" value={counts.assets} icon={<HddOutlined />} /></Col>
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      {/* 核心指标 */}
+      <Row gutter={[12, 12]}>
+        <Col span={6}>
+          <Card size="small">
+            <Typography.Text type="secondary">安全事件</Typography.Text>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>{counts.incidents}</div>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              未闭环 {openIncidents} · 高危 {critical}
+            </Typography.Text>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Typography.Text type="secondary">漏洞</Typography.Text>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>{counts.findings}</div>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>Nuclei 扫描发现</Typography.Text>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Typography.Text type="secondary">告警</Typography.Text>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>{counts.events}</div>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>Wazuh / 手动录入</Typography.Text>
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card size="small">
+            <Typography.Text type="secondary">报告</Typography.Text>
+            <div style={{ fontSize: 26, fontWeight: 700 }}>{counts.reports}</div>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>可下载 PDF</Typography.Text>
+          </Card>
+        </Col>
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={12}><Card size="small"><TrendChart option={eventTrend} height={280} /></Card></Col>
-        <Col span={12}><Card size="small"><TrendChart option={incidentTrend} height={280} /></Card></Col>
+      {/* 快捷操作 */}
+      <Row gutter={[12, 12]}>
+        {shortcuts.map((s) => (
+          <Col span={6} key={s.label}>
+            <Card size="small" hoverable onClick={() => navigate(s.to)} style={{ textAlign: 'center', cursor: 'pointer' }}>
+              <Space>{s.icon}{s.label}</Space>
+            </Card>
+          </Col>
+        ))}
       </Row>
 
-      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col span={8}>
-          <Card size="small" title="系统健康状态">
+      <Row gutter={[12, 12]}>
+        {/* 系统状态 */}
+        <Col span={10}>
+          <Card size="small" title="系统状态" loading={loading}>
             <Space direction="vertical" style={{ width: '100%' }}>
-              {healthItems.map(([name, h]) => (
+              {statusLine.map(([name, h]) => (
                 <Space key={name} style={{ justifyContent: 'space-between', width: '100%' }}>
                   <Typography.Text>{name}</Typography.Text>
-                  {renderHealth(h)}
+                  {renderStatus(h)}
                 </Space>
               ))}
             </Space>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              AI 显示 Mock 表示未接入真实模型 —— 到「系统维护 → AI 接入」配置密钥
+            </Typography.Text>
           </Card>
         </Col>
-        <Col span={8}>
-          <Card size="small" title="最近安全事件" styles={{ body: { maxHeight: 280, overflow: 'auto' } }}>
-            {events.slice(0, 8).map((e) => (
-              <div key={e.id} style={{ padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
-                <Space>
-                  <StatusTag value={e.severity} />
-                  <Typography.Text ellipsis style={{ maxWidth: 220 }}>{e.event_type || e.source}</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>{e.src_ip}</Typography.Text>
-                </Space>
-              </div>
-            ))}
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card size="small" title="最近事件 (Incidents)" styles={{ body: { maxHeight: 280, overflow: 'auto' } }}>
-            {incidents.slice(0, 8).map((i) => (
-              <div key={i.id} style={{ padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
-                <Space>
-                  <StatusTag value={i.severity} />
-                  <StatusTag value={i.status} />
-                  <Typography.Text ellipsis style={{ maxWidth: 200 }}>{i.title}</Typography.Text>
-                </Space>
-              </div>
-            ))}
+        {/* 最近事件 */}
+        <Col span={14}>
+          <Card size="small" title="最近安全事件" loading={loading} styles={{ body: { maxHeight: 320, overflow: 'auto' } }}>
+            <List
+              size="small"
+              dataSource={recent}
+              locale={{ emptyText: '暂无事件 —— 发起扫描或注入告警后自动生成' }}
+              renderItem={(i) => (
+                <List.Item style={{ cursor: 'pointer' }} onClick={() => navigate(`/incidents/${i.id}`)}>
+                  <Space>
+                    <Tag color={i.severity === 'critical' ? 'red' : i.severity === 'high' ? 'volcano' : i.severity === 'medium' ? 'orange' : 'blue'}>
+                      {i.severity}
+                    </Tag>
+                    <Tag>{i.status}</Tag>
+                    <Typography.Text ellipsis style={{ maxWidth: 420 }}>{i.title}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{i.detected_at?.slice(0, 16)}</Typography.Text>
+                  </Space>
+                </List.Item>
+              )}
+            />
           </Card>
         </Col>
       </Row>
-    </Spin>
+    </Space>
   )
 }

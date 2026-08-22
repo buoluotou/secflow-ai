@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Table, Space, Button, message, Tabs, Typography } from 'antd'
-import { RobotOutlined, AlertOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { Table, Space, Button, message, Tabs, Typography, Tag, Select, Input, Popconfirm } from 'antd'
+import { RobotOutlined, AlertOutlined, ThunderboltOutlined, SafetyCertificateOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Incident, SecurityEvent } from '../services/types'
+import type { Incident, IOC, SecurityEvent } from '../services/types'
 import StatusTag from '../components/StatusTag'
 
 export default function Incidents() {
@@ -13,6 +13,7 @@ export default function Incidents() {
       items={[
         { key: 'incidents', label: <span><AlertOutlined /> 安全事件</span>, children: <IncidentList /> },
         { key: 'events', label: <span><ThunderboltOutlined /> 原始告警</span>, children: <RawEvents /> },
+        { key: 'ioc', label: <span><SafetyCertificateOutlined /> 威胁情报</span>, children: <IocManager /> },
       ]}
     />
   )
@@ -124,5 +125,63 @@ function RawEvents() {
         { title: '置信度', dataIndex: 'confidence', width: 80, render: (v: number) => `${((v || 0) * 100).toFixed(0)}%` },
       ]}
     />
+  )
+}
+
+// ---------------------------------------------------------------------
+// 威胁情报（IOC）—— 事件研判的关联依据
+// ---------------------------------------------------------------------
+function IocManager() {
+  const [items, setItems] = useState<IOC[]>([])
+  const [loading, setLoading] = useState(false)
+  const [value, setValue] = useState('')
+  const [type, setType] = useState('ip')
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      setItems((await api.get('/iocs', { params: { limit: 100 } })).data)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const add = async () => {
+    if (!value.trim()) return
+    await api.post('/iocs', { type, value: value.trim(), source: 'manual', confidence: 0.8 })
+    message.success('已添加')
+    setValue('')
+    load()
+  }
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }}>
+      <Space>
+        <Select style={{ width: 100 }} value={type} onChange={setType}
+          options={['ip', 'domain', 'url', 'hash', 'email'].map((t) => ({ value: t, label: t }))} />
+        <Input style={{ width: 280 }} placeholder="输入恶意指标，如 45.83.66.101" value={value} onChange={(e) => setValue(e.target.value)} onPressEnter={add} />
+        <Button type="primary" onClick={add}>添加</Button>
+      </Space>
+      <Table
+        rowKey="id" size="small" loading={loading} dataSource={items} pagination={{ pageSize: 10 }}
+        locale={{ emptyText: '暂无威胁情报 —— 添加后，关联引擎会自动匹配事件来源' }}
+        columns={[
+          { title: '类型', dataIndex: 'type', width: 80, render: (v: string) => <Tag color={v === 'ip' ? 'red' : 'blue'}>{v}</Tag> },
+          { title: '指标值', dataIndex: 'value' },
+          { title: '来源', dataIndex: 'source', width: 90 },
+          { title: '置信度', dataIndex: 'confidence', width: 90, render: (v: number) => `${((v ?? 0) * 100).toFixed(0)}%` },
+          {
+            title: '', width: 60,
+            render: (_, r: IOC) => (
+              <Popconfirm title="删除？" onConfirm={async () => { await api.delete(`/iocs/${r.id}`); load() }}>
+                <Button danger size="small" type="text">删</Button>
+              </Popconfirm>
+            ),
+          },
+        ]}
+      />
+    </Space>
   )
 }

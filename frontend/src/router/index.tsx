@@ -5,11 +5,11 @@ import Dashboard from '../pages/Dashboard'
 import Incidents from '../pages/Incidents'
 import IncidentDetail from '../pages/IncidentDetail'
 import Findings from '../pages/Findings'
-import Scans from '../pages/Scans'
 import Reports from '../pages/Reports'
-import Settings from '../pages/Settings'
+import Audit from '../pages/Audit'
+import Maintenance from '../pages/Maintenance'
 
-// 精简导航：核心工作流 6 页（其余功能已合并到各页内）
+// 安服大模块导航（6 模块）
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
   {
@@ -21,9 +21,9 @@ export const router = createBrowserRouter([
       { path: 'incidents', element: <Incidents /> },
       { path: 'incidents/:id', element: <IncidentDetail /> },
       { path: 'findings', element: <Findings /> },
-      { path: 'scans', element: <Scans /> },
       { path: 'reports', element: <Reports /> },
-      { path: 'settings', element: <Settings /> },
+      { path: 'audit', element: <Audit /> },
+      { path: 'maintenance', element: <Maintenance /> },
     ],
   },
 ])
